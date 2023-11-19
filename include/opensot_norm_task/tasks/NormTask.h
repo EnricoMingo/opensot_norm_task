@@ -29,6 +29,7 @@ public:
 
     NormTask(TaskPtr taskPtr);
     ~NormTask(){}
+    bool setRegularization(const double rho);
 
 
 private:
@@ -37,6 +38,9 @@ private:
     virtual void _update(const Eigen::VectorXd& x);
 
     double _norm_b;
+    double _rho;
+    Eigen::VectorXd _ones;
+    Eigen::VectorXd _zeros;
 };
 
 }

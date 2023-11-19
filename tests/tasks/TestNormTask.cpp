@@ -77,6 +77,71 @@ XBot::MatLogger2::Ptr getLogger(const std::string& name)
     return logger;
 }
 
+TEST_F(testNormTask, testRegularization)
+{
+    XBot::MatLogger2::Ptr logger = getLogger("testNormalTask_convergence_regularization");
+
+    OpenSoT::tasks::velocity::Cartesian::Ptr ee = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee",this->q, *this->_model.get(), "panda_link8", "panda_link0");
+    OpenSoT::task::NormTask::Ptr een = std::make_shared<OpenSoT::task::NormTask>(ee);
+    een->setLambda(.025);
+    een->update(this->q);
+
+
+    Eigen::Affine3d Tinit;
+    ee->getActualPose(Tinit);
+
+    Eigen::Affine3d Tgoal = Tinit;
+    Tgoal.translation()[1] += 0.1;
+
+    ee->setReference(Tgoal);
+
+    std::cout<<"Tinit: \n"<<Tinit.matrix()<<std::endl;
+    std::cout<<std::endl;
+    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
+
+    OpenSoT::AutoStack::Ptr stack;
+    stack /= een;
+
+    OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e10);
+
+    double rho = 1e-3;
+    for(unsigned int j = 0; j < 4; ++j)
+    {
+        logger->add("rho_"+std::to_string(j), rho);
+
+        een->setRegularization(rho);
+        this->setHomingPosition();
+
+        Eigen::VectorXd dq;
+        dq.setZero(this->q.size());
+        for(unsigned int i = 0; i < 300; ++i)
+        {
+            this->_model->setJointPosition(this->q);
+            this->_model->update();
+
+            stack->update(this->q);
+
+            if(!solver->solve(dq))
+                dq.setZero();
+            this->q += dq;
+
+            logger->add("q_"+std::to_string(j), this->q);
+            logger->add("dq_"+std::to_string(j), dq);
+            logger->add("task_error_"+std::to_string(j), ee->getError());
+            logger->add("task_error_norm_"+std::to_string(j), (ee->getError().transpose() * ee->getError())[0]);
+
+            std::cout<<"task_error_norm: "<<(ee->getError().transpose() * ee->getError())[0]<<std::endl;
+        }
+
+        EXPECT_LE((ee->getError().transpose() * ee->getError())[0], 1e-4);
+
+        rho*=1e-3;
+        if(rho < 1e-9)
+            rho = 0.;
+    }
+
+}
+
 TEST_F(testNormTask, testConvergence)
 {
     XBot::MatLogger2::Ptr logger = getLogger("testNormalTask_convergence_comparison_single_task");
@@ -96,14 +161,8 @@ TEST_F(testNormTask, testConvergence)
     std::cout<<std::endl;
     std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
 
-    Eigen::VectorXd qmin, qmax;
-    this->_model->getJointLimits(qmin, qmax);
-    OpenSoT::constraints::velocity::JointLimits::Ptr jl = std::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
-
-
     OpenSoT::AutoStack::Ptr stack;
     stack /= ee;
-    //stack<<jl;
 
     OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e10);
 
@@ -162,7 +221,6 @@ TEST_F(testNormTask, testConvergence)
 
     OpenSoT::AutoStack::Ptr stack2;
     stack2 /= een;
-    //stack2<<jl;
 
     solver.reset();
     solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack2, 1e10);
@@ -199,7 +257,7 @@ TEST_F(testNormTask, testConvergencePostural)
     XBot::MatLogger2::Ptr logger = getLogger("testNormalTask_convergence_comparison_task_postural");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr ee = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee",this->q, *this->_model.get(), "panda_link8", "panda_link0");
-    ee->setLambda(1.);
+    ee->setLambda(.1);
 
     Eigen::Affine3d Tinit;
     ee->getActualPose(Tinit);
@@ -228,7 +286,7 @@ TEST_F(testNormTask, testConvergencePostural)
 
     Eigen::VectorXd dq;
     dq.setZero(this->q.size());
-    for(unsigned int i = 0; i < 100; ++i)
+    for(unsigned int i = 0; i < 200; ++i)
     {
         this->_model->setJointPosition(this->q);
         this->_model->update();
@@ -242,6 +300,7 @@ TEST_F(testNormTask, testConvergencePostural)
         logger->add("q", this->q);
         logger->add("dq", dq);
         logger->add("task_error", ee->getError());
+        logger->add("postural_error_norm", (jp->getError().transpose() * jp->getError())[0]);
         logger->add("task_error_norm", (ee->getError().transpose() * ee->getError())[0]);
 
         std::cout<<"task_error_norm: "<<(ee->getError().transpose() * ee->getError())[0]<<std::endl;
@@ -262,7 +321,11 @@ TEST_F(testNormTask, testConvergencePostural)
     std::cout<<std::endl;
     std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
 
+    ee->setLambda(1.0);
+    ee->update(this->q);
     OpenSoT::task::NormTask::Ptr een = std::make_shared<OpenSoT::task::NormTask>(ee);
+    een->setLambda(.05);
+    //een->setRegularization(0.);
     een->update(this->q);
 
     std::cout<<"een->getA: "<<een->getA()<<std::endl;
@@ -284,7 +347,7 @@ TEST_F(testNormTask, testConvergencePostural)
     solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack2, 1e10);
 
     dq.setZero(this->q.size());
-    for(unsigned int i = 0; i < 100; ++i)
+    for(unsigned int i = 0; i < 200; ++i)
     {
         this->_model->setJointPosition(this->q);
         this->_model->update();
@@ -298,6 +361,7 @@ TEST_F(testNormTask, testConvergencePostural)
         logger->add("n_q", this->q);
         logger->add("n_dq", dq);
         logger->add("n_task_error", ee->getError());
+        logger->add("n_postural_error_norm", (jp->getError().transpose() * jp->getError())[0]);
         logger->add("n_task_error_norm", (ee->getError().transpose() * ee->getError())[0]);
 
         std::cout<<"n_task_error_norm: "<<(ee->getError().transpose() * ee->getError())[0]<<std::endl;
