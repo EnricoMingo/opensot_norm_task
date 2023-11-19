@@ -327,7 +327,6 @@ TEST_F(testNormTask, testConvergencePostural)
     ee->update(this->q);
     OpenSoT::task::NormTask::Ptr een = std::make_shared<OpenSoT::task::NormTask>(ee);
     een->setLambda(.05);
-    een->setRegularization(1e-10);
     //een->setRegularization(0.);
     een->update(this->q);
 
