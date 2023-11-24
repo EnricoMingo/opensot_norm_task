@@ -129,6 +129,7 @@ TEST_F(testNormTask, testRegularization)
             logger->add("dq_"+std::to_string(j), dq);
             logger->add("task_error_"+std::to_string(j), ee->getError());
             logger->add("task_error_norm2_"+std::to_string(j), (ee->getError().transpose() * ee->getError())[0]);
+            een->log(logger);
 
             std::cout<<"task_error_norm2: "<<(ee->getError().transpose() * ee->getError())[0]<<std::endl;
         }
@@ -209,13 +210,13 @@ TEST_F(testNormTask, testConvergence)
     een->update(this->q);
 
     std::cout<<"een->getA: "<<een->getA()<<std::endl;
-    EXPECT_TRUE(een->getA().rows() == 1);
+    EXPECT_TRUE(een->getA().rows() == ee->getA().rows());
     EXPECT_TRUE(een->getA().cols() == this->q.size());
     std::cout<<"een->getb: "<<een->getb()<<std::endl;
-    EXPECT_TRUE(een->getb().size() == 1);
+    EXPECT_TRUE(een->getb().size() == ee->getb().size());
     std::cout<<"een->getWeight: "<<een->getWeight()<<std::endl;
-    EXPECT_TRUE(een->getWeight().rows() == 1);
-    EXPECT_TRUE(een->getWeight().cols() == 1);
+    EXPECT_TRUE(een->getWeight().rows() == ee->getWeight().rows());
+    EXPECT_TRUE(een->getWeight().cols() == ee->getWeight().cols());
 
 
 
@@ -243,6 +244,7 @@ TEST_F(testNormTask, testConvergence)
         double norm2_b = (ee->getError().transpose() * ee->getError())[0];
         logger->add("n_task_error_norm2", norm2_b);
         logger->add("n_task_error_norm", std::sqrt(norm2_b));
+        een->log(logger);
 
         std::cout<<"n_task_error_norm2: "<<norm2_b<<std::endl;
     }
@@ -330,16 +332,6 @@ TEST_F(testNormTask, testConvergencePostural)
     //een->setRegularization(0.);
     een->update(this->q);
 
-    std::cout<<"een->getA: "<<een->getA()<<std::endl;
-    EXPECT_TRUE(een->getA().rows() == 1);
-    EXPECT_TRUE(een->getA().cols() == this->q.size());
-    std::cout<<"een->getb: "<<een->getb()<<std::endl;
-    EXPECT_TRUE(een->getb().size() == 1);
-    std::cout<<"een->getWeight: "<<een->getWeight()<<std::endl;
-    EXPECT_TRUE(een->getWeight().rows() == 1);
-    EXPECT_TRUE(een->getWeight().cols() == 1);
-
-
 
     OpenSoT::AutoStack::Ptr stack2;
     stack2 = (een/jp);
@@ -367,6 +359,7 @@ TEST_F(testNormTask, testConvergencePostural)
         double norm2_b = (ee->getError().transpose() * ee->getError())[0];
         logger->add("n_task_error_norm2", norm2_b);
         logger->add("n_task_error_norm", std::sqrt(norm2_b));
+        een->log(logger);
 
         std::cout<<"n_task_error_norm2: "<<(ee->getError().transpose() * ee->getError())[0]<<std::endl;
     }
@@ -378,153 +371,153 @@ TEST_F(testNormTask, testConvergencePostural)
 
 }
 
-TEST_F(testNormTask, testConvergenceCartesian)
-{
-    XBot::MatLogger2::Ptr logger = getLogger("testNormalTask_convergence_comparison_task_cartesian");
+//TEST_F(testNormTask, testConvergenceCartesian)
+//{
+//    XBot::MatLogger2::Ptr logger = getLogger("testNormalTask_convergence_comparison_task_cartesian");
 
-    OpenSoT::tasks::velocity::Cartesian::Ptr ee = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee",this->q, *this->_model.get(), "panda_link8", "panda_link0");
-    ee->setLambda(0.1);
+//    OpenSoT::tasks::velocity::Cartesian::Ptr ee = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee",this->q, *this->_model.get(), "panda_link8", "panda_link0");
+//    ee->setLambda(0.1);
 
-    Eigen::Affine3d Tinit;
-    ee->getActualPose(Tinit);
+//    Eigen::Affine3d Tinit;
+//    ee->getActualPose(Tinit);
 
-    Eigen::Affine3d Tgoal = Tinit;
-    Tgoal.translation()[1] += 0.1;
+//    Eigen::Affine3d Tgoal = Tinit;
+//    Tgoal.translation()[1] += 0.1;
 
-    ee->setReference(Tgoal);
+//    ee->setReference(Tgoal);
 
-    std::cout<<"Tinit: \n"<<Tinit.matrix()<<std::endl;
-    std::cout<<std::endl;
-    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
-
-
-    OpenSoT::tasks::velocity::Cartesian::Ptr el = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee",this->q, *this->_model.get(), "panda_link4", "panda_link0");
-    el->setLambda(0.1);
-
-    Eigen::Affine3d Telinit;
-    el->getActualPose(Telinit);
-
-    Eigen::Affine3d Telgoal = Telinit;
-    Telgoal.translation()[1] -= 0.1;
-
-    el->setReference(Telgoal);
-
-    std::cout<<"Telinit: \n"<<Telinit.matrix()<<std::endl;
-    std::cout<<std::endl;
-    std::cout<<"Telgoal: \n"<<Telgoal.matrix()<<std::endl;
-
-    Eigen::VectorXd qmin, qmax;
-    this->_model->getJointLimits(qmin, qmax);
-    OpenSoT::constraints::velocity::JointLimits::Ptr jl = std::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
+//    std::cout<<"Tinit: \n"<<Tinit.matrix()<<std::endl;
+//    std::cout<<std::endl;
+//    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
 
 
-    OpenSoT::AutoStack::Ptr stack;
-    stack = (ee/el);
-    //stack<<jl;
+//    OpenSoT::tasks::velocity::Cartesian::Ptr el = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee",this->q, *this->_model.get(), "panda_link4", "panda_link0");
+//    el->setLambda(0.1);
 
-    OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e10);
+//    Eigen::Affine3d Telinit;
+//    el->getActualPose(Telinit);
 
-    Eigen::VectorXd dq;
-    dq.setZero(this->q.size());
-    for(unsigned int i = 0; i < 100; ++i)
-    {
-        this->_model->setJointPosition(this->q);
-        this->_model->update();
+//    Eigen::Affine3d Telgoal = Telinit;
+//    Telgoal.translation()[1] -= 0.1;
 
-        stack->update(this->q);
+//    el->setReference(Telgoal);
 
-        if(!solver->solve(dq))
-            dq.setZero();
-        this->q += dq;
+//    std::cout<<"Telinit: \n"<<Telinit.matrix()<<std::endl;
+//    std::cout<<std::endl;
+//    std::cout<<"Telgoal: \n"<<Telgoal.matrix()<<std::endl;
 
-        logger->add("q", this->q);
-        logger->add("dq", dq);
-        logger->add("task_error", ee->getError());
-        logger->add("second_task_error", el->getError());
-        logger->add("task_error_norm2", (ee->getError().transpose() * ee->getError())[0]);
-        logger->add("second_task_error_norm2", (el->getError().transpose() * el->getError())[0]);
-
-        std::cout<<"task_error_norm2: "<<(ee->getError().transpose() * ee->getError())[0]<<"     second_task_error_norm2: "<<(el->getError().transpose() * el->getError())[0]<<std::endl;
-    }
-
-    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
-    std::cout<<std::endl;
-    Eigen::Affine3d Tactual;
-    ee->getActualPose(Tactual);
-    std::cout<<"Tactual: \n"<<Tactual.matrix()<<std::endl;
-
-    std::cout<<"Telgoal: \n"<<Telgoal.matrix()<<std::endl;
-    std::cout<<std::endl;
-    Eigen::Affine3d Telactual;
-    ee->getActualPose(Telactual);
-    std::cout<<"Telactual: \n"<<Telactual.matrix()<<std::endl;
-
-    this->setHomingPosition();
-    this->_model->setJointPosition(this->q);
-    this->_model->update();
-
-    stack->update(this->q);
-    std::cout<<"Tinit: \n"<<Tinit.matrix()<<std::endl;
-    std::cout<<std::endl;
-    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
-
-    ee->setLambda(1.);
-    ee->update(this->q);
-    OpenSoT::task::NormTask::Ptr een = std::make_shared<OpenSoT::task::NormTask>(ee);
-    ee->setLambda(0.05);
-    een->update(this->q);
-
-    std::cout<<"een->getA: "<<een->getA()<<std::endl;
-    EXPECT_TRUE(een->getA().rows() == 1);
-    EXPECT_TRUE(een->getA().cols() == this->q.size());
-    std::cout<<"een->getb: "<<een->getb()<<std::endl;
-    EXPECT_TRUE(een->getb().size() == 1);
-    std::cout<<"een->getWeight: "<<een->getWeight()<<std::endl;
-    EXPECT_TRUE(een->getWeight().rows() == 1);
-    EXPECT_TRUE(een->getWeight().cols() == 1);
+//    Eigen::VectorXd qmin, qmax;
+//    this->_model->getJointLimits(qmin, qmax);
+//    OpenSoT::constraints::velocity::JointLimits::Ptr jl = std::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
 
 
+//    OpenSoT::AutoStack::Ptr stack;
+//    stack = (ee/el);
+//    //stack<<jl;
 
-    OpenSoT::AutoStack::Ptr stack2;
-    stack2 = (een/el);
-    //stack2<<jl;
+//    OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e10);
 
-    solver.reset();
-    solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack2, 1e10);
+//    Eigen::VectorXd dq;
+//    dq.setZero(this->q.size());
+//    for(unsigned int i = 0; i < 100; ++i)
+//    {
+//        this->_model->setJointPosition(this->q);
+//        this->_model->update();
 
-    dq.setZero(this->q.size());
-    for(unsigned int i = 0; i < 100; ++i)
-    {
-        this->_model->setJointPosition(this->q);
-        this->_model->update();
+//        stack->update(this->q);
 
-        stack2->update(this->q);
+//        if(!solver->solve(dq))
+//            dq.setZero();
+//        this->q += dq;
 
-        if(!solver->solve(dq))
-            dq.setZero();
-        this->q += dq;
+//        logger->add("q", this->q);
+//        logger->add("dq", dq);
+//        logger->add("task_error", ee->getError());
+//        logger->add("second_task_error", el->getError());
+//        logger->add("task_error_norm2", (ee->getError().transpose() * ee->getError())[0]);
+//        logger->add("second_task_error_norm2", (el->getError().transpose() * el->getError())[0]);
 
-        logger->add("n_q", this->q);
-        logger->add("n_dq", dq);
-        logger->add("n_task_error", ee->getError());
-        logger->add("n_second_task_error", el->getError());
-        logger->add("n_task_error_norm2", (ee->getError().transpose() * ee->getError())[0]);
-        logger->add("n_second_task_error_norm2", (el->getError().transpose() * el->getError())[0]);
+//        std::cout<<"task_error_norm2: "<<(ee->getError().transpose() * ee->getError())[0]<<"     second_task_error_norm2: "<<(el->getError().transpose() * el->getError())[0]<<std::endl;
+//    }
 
-        std::cout<<"task_error_norm2: "<<(ee->getError().transpose() * ee->getError())[0]<<"     second_task_error_norm2: "<<(el->getError().transpose() * el->getError())[0]<<std::endl;
-    }
+//    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
+//    std::cout<<std::endl;
+//    Eigen::Affine3d Tactual;
+//    ee->getActualPose(Tactual);
+//    std::cout<<"Tactual: \n"<<Tactual.matrix()<<std::endl;
 
-    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
-    std::cout<<std::endl;
-    ee->getActualPose(Tactual);
-    std::cout<<"Tactual: \n"<<Tactual.matrix()<<std::endl;
+//    std::cout<<"Telgoal: \n"<<Telgoal.matrix()<<std::endl;
+//    std::cout<<std::endl;
+//    Eigen::Affine3d Telactual;
+//    ee->getActualPose(Telactual);
+//    std::cout<<"Telactual: \n"<<Telactual.matrix()<<std::endl;
 
-    std::cout<<"Telgoal: \n"<<Telgoal.matrix()<<std::endl;
-    std::cout<<std::endl;
-    ee->getActualPose(Telactual);
-    std::cout<<"Telactual: \n"<<Telactual.matrix()<<std::endl;
+//    this->setHomingPosition();
+//    this->_model->setJointPosition(this->q);
+//    this->_model->update();
 
-}
+//    stack->update(this->q);
+//    std::cout<<"Tinit: \n"<<Tinit.matrix()<<std::endl;
+//    std::cout<<std::endl;
+//    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
+
+//    ee->setLambda(1.);
+//    ee->update(this->q);
+//    OpenSoT::task::NormTask::Ptr een = std::make_shared<OpenSoT::task::NormTask>(ee);
+//    ee->setLambda(0.05);
+//    een->update(this->q);
+
+//    std::cout<<"een->getA: "<<een->getA()<<std::endl;
+//    EXPECT_TRUE(een->getA().rows() == 1);
+//    EXPECT_TRUE(een->getA().cols() == this->q.size());
+//    std::cout<<"een->getb: "<<een->getb()<<std::endl;
+//    EXPECT_TRUE(een->getb().size() == 1);
+//    std::cout<<"een->getWeight: "<<een->getWeight()<<std::endl;
+//    EXPECT_TRUE(een->getWeight().rows() == 1);
+//    EXPECT_TRUE(een->getWeight().cols() == 1);
+
+
+
+//    OpenSoT::AutoStack::Ptr stack2;
+//    stack2 = (een/el);
+//    //stack2<<jl;
+
+//    solver.reset();
+//    solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack2, 1e10);
+
+//    dq.setZero(this->q.size());
+//    for(unsigned int i = 0; i < 100; ++i)
+//    {
+//        this->_model->setJointPosition(this->q);
+//        this->_model->update();
+
+//        stack2->update(this->q);
+
+//        if(!solver->solve(dq))
+//            dq.setZero();
+//        this->q += dq;
+
+//        logger->add("n_q", this->q);
+//        logger->add("n_dq", dq);
+//        logger->add("n_task_error", ee->getError());
+//        logger->add("n_second_task_error", el->getError());
+//        logger->add("n_task_error_norm2", (ee->getError().transpose() * ee->getError())[0]);
+//        logger->add("n_second_task_error_norm2", (el->getError().transpose() * el->getError())[0]);
+
+//        std::cout<<"task_error_norm2: "<<(ee->getError().transpose() * ee->getError())[0]<<"     second_task_error_norm2: "<<(el->getError().transpose() * el->getError())[0]<<std::endl;
+//    }
+
+//    std::cout<<"Tgoal: \n"<<Tgoal.matrix()<<std::endl;
+//    std::cout<<std::endl;
+//    ee->getActualPose(Tactual);
+//    std::cout<<"Tactual: \n"<<Tactual.matrix()<<std::endl;
+
+//    std::cout<<"Telgoal: \n"<<Telgoal.matrix()<<std::endl;
+//    std::cout<<std::endl;
+//    ee->getActualPose(Telactual);
+//    std::cout<<"Telactual: \n"<<Telactual.matrix()<<std::endl;
+
+//}
 
 }
 

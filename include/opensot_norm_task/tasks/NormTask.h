@@ -31,16 +31,40 @@ public:
     ~NormTask(){}
     bool setRegularization(const double rho);
 
+    /**
+     * @brief setThresholds for computation of Null-Space Projector gain
+     * @param e0 >= 0.
+     * @param e1 >= 0.
+     * @return true if e1 >= e0
+     */
+    bool setThresholds(double e0, double e1);
+
 
 private:
     TaskPtr _taskPtr;
     virtual void _log(XBot::MatLogger2::Ptr logger);
     virtual void _update(const Eigen::VectorXd& x);
 
+    /**
+     * @brief computeLame Compute coefficient in equation (26)
+     * @param norm_e sqrt(e'*e), norm of the error
+     * @return coefficient dependent on error and thresholds
+     */
+    double compute_lam_e(double norm_e);
+
+    /**
+     * @brief compute_lam compute lam projector gain in equation (25)
+     * @param norm_e sqrt(e'*e), norm of the error
+     * @return gain dependent on error and thresholds
+     */
+    double compute_lam(double norm_e);
+
     double _norm_b;
     double _rho;
     Eigen::VectorXd _ones;
     Eigen::VectorXd _zeros;
+
+    double _lam, _e1, _e0, _lam0, _lam1, _g;
 };
 
 }
