@@ -1,22 +1,31 @@
 #include <opensot_norm_task/tasks/NormTask.h>
 
 
-OpenSoT::task::NormTask::NormTask(TaskPtr taskPtr):
+OpenSoT::task::NormTask::NormTask(TaskPtr taskPtr, bool marey_gain):
     Task("norm_" + taskPtr->getTaskID(), taskPtr->getXSize()),
     _taskPtr(taskPtr),
     _rho(1e-9),
     _e1(1e-1),
     _e0(1e-2),
     _lam0(1e-9),
-    _lam1(0.999)
+    _lam1(0.999),
+    _marey_gain(marey_gain)
 {
     _zeros.setZero(_taskPtr->getXSize());
     _taskPtr->update(_zeros);
 
-    _A.setZero(_taskPtr->getA().rows(), _taskPtr->getA().cols());
-    _b.setZero(_taskPtr->getb().size());
-
-    _W.setIdentity(_taskPtr->getWeight().rows(), _taskPtr->getWeight().cols());
+    if(_marey_gain)
+    {
+        _A.setZero(_taskPtr->getA().rows(), _taskPtr->getA().cols());
+        _b.setZero(_taskPtr->getb().size());
+        _W.setIdentity(_taskPtr->getWeight().rows(), _taskPtr->getWeight().cols());
+    }
+    else
+    {
+        _A.setZero(1, _taskPtr->getA().cols());
+        _b.setZero(1);
+        _W.setIdentity(1, 1);
+    }
 
     _ones.setOnes(_taskPtr->getb().size());
 }
@@ -29,20 +38,29 @@ void OpenSoT::task::NormTask::_update(const Eigen::VectorXd &x)
     _b.setZero();
     _A.setZero();
 
-    _g = compute_lam(_norm_b);
-
-    _b[0] = _g * _lambda * _norm_b;
-    _A.block(0,0,1,_A.cols()) = _g * (_taskPtr->getb() + _rho * _ones).transpose() * _taskPtr->getA();
+    _b[0] = _lambda * _norm_b;
+    _A.block(0,0,1,_A.cols()) = (_taskPtr->getb() + _rho * _ones).transpose() * _taskPtr->getA();
     _A.block(0,0,1,_A.cols()) /= (_norm_b + _rho);
 
-    _b += (1. - _g) * _taskPtr->getb();
-    _A += (1. - _g) * _taskPtr->getA();
+    if(_marey_gain)
+    {
+        _g = compute_lam(_norm_b);
+
+        _b[0] *= _g;
+        _A.block(0,0,1,_A.cols()) *= _g;
+
+        _b += (1. - _g) * _taskPtr->getb();
+        _A += (1. - _g) * _taskPtr->getA();
+    }
 }
 
 void OpenSoT::task::NormTask::_log(XBot::MatLogger2::Ptr logger)
 {
     logger->add("norm_b", _norm_b);
-    logger->add("g", _g);
+    if(_marey_gain)
+    {
+        logger->add("g", _g);
+    }
 }
 
 bool OpenSoT::task::NormTask::setRegularization(const double rho)

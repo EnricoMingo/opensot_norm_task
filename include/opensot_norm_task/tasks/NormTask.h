@@ -27,7 +27,7 @@ class NormTask: public Task<Eigen::MatrixXd, Eigen::VectorXd> {
 public:
     typedef std::shared_ptr<NormTask> Ptr;
 
-    NormTask(TaskPtr taskPtr);
+    NormTask(TaskPtr taskPtr, bool marey_gain = true);
     ~NormTask(){}
     bool setRegularization(const double rho);
 
@@ -65,6 +65,7 @@ private:
     Eigen::VectorXd _zeros;
 
     double _lam, _e1, _e0, _lam0, _lam1, _g;
+    bool _marey_gain;
 };
 
 }
