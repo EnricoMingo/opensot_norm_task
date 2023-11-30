@@ -28,6 +28,8 @@ OpenSoT::task::NormTask::NormTask(TaskPtr taskPtr, bool marey_gain):
     }
 
     _ones.setOnes(_taskPtr->getb().size());
+
+    _update(_zeros);
 }
 
 void OpenSoT::task::NormTask::_update(const Eigen::VectorXd &x)
