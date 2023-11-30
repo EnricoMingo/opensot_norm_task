@@ -39,10 +39,17 @@ public:
      */
     bool setThresholds(double e0, double e1);
 
+    bool setThresholdE0(double e0);
+
+    bool setThresholdE1(double e1);
+
+    const double getE0() const {return _e0;}
+    const double getE1() const {return _e1;}
+
 
 private:
     TaskPtr _taskPtr;
-    virtual void _log(XBot::MatLogger2::Ptr logger);
+    virtual void _log(XBot::MatLogger2::Ptr logger) override;
     virtual void _update(const Eigen::VectorXd& x);
 
     /**

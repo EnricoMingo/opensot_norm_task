@@ -58,10 +58,10 @@ void OpenSoT::task::NormTask::_update(const Eigen::VectorXd &x)
 
 void OpenSoT::task::NormTask::_log(XBot::MatLogger2::Ptr logger)
 {
-    logger->add("norm_b", _norm_b);
+    logger->add(_task_id + "_norm_b", _norm_b);
     if(_marey_gain)
     {
-        logger->add("g", _g);
+        logger->add(_task_id + "_g", _g);
     }
 }
 
@@ -90,7 +90,7 @@ double OpenSoT::task::NormTask::compute_lam_e(double norm_e)
 
     double c = -12. * a/b + 6.;
 
-    return 1./std::exp(c);
+    return 1./(1. + std::exp(c));
 }
 
 bool OpenSoT::task::NormTask::setThresholds(double e0, double e1)
@@ -98,6 +98,26 @@ bool OpenSoT::task::NormTask::setThresholds(double e0, double e1)
     if(e1 >= e0)
     {
         _e0 = e0;
+        _e1 = e1;
+        return true;
+    }
+    return false;
+}
+
+bool OpenSoT::task::NormTask::setThresholdE0(double e0)
+{
+    if(_e1 >= e0)
+    {
+        _e0 = e0;
+        return true;
+    }
+    return false;
+}
+
+bool OpenSoT::task::NormTask::setThresholdE1(double e1)
+{
+    if(e1 >= _e0)
+    {
         _e1 = e1;
         return true;
     }
