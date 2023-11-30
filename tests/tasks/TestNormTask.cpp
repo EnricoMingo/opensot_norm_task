@@ -14,6 +14,7 @@
 #include <OpenSoT/utils/AutoStack.h>
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <OpenSoT/Task.h>
 
 namespace{
 
@@ -75,6 +76,39 @@ XBot::MatLogger2::Ptr getLogger(const std::string& name)
     XBot::MatLogger2::Ptr logger = XBot::MatLogger2::MakeLogger(name); // date-time automatically appended
     logger->set_buffer_mode(XBot::VariableBuffer::Mode::circular_buffer);
     return logger;
+}
+
+TEST_F(testNormTask, testAggregation)
+{
+    OpenSoT::tasks::velocity::Cartesian::Ptr ee1 = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee1",this->q, *this->_model.get(), "panda_link8", "panda_link0");
+    OpenSoT::tasks::velocity::Cartesian::Ptr ee2 = std::make_shared<OpenSoT::tasks::velocity::Cartesian>("ee2",this->q, *this->_model.get(), "panda_link4", "panda_link0");
+
+    OpenSoT::task::NormTask::Ptr een1 = std::make_shared<OpenSoT::task::NormTask>(ee1, false);
+    OpenSoT::task::NormTask::Ptr een2 = std::make_shared<OpenSoT::task::NormTask>(ee2, false);
+
+    auto aggregated_task = een1 + een2;
+
+    Eigen::MatrixXd I; I.setIdentity(2,2);
+
+    EXPECT_TRUE(aggregated_task->getTaskID() == "norm_ee1+norm_ee2");
+    EXPECT_TRUE(aggregated_task->getWeight() == I);
+
+    std::list<OpenSoT::Task<Eigen::MatrixXd, Eigen::VectorXd>::TaskPtr> task_list;
+    task_list.push_back(een1);
+    task_list.push_back(een2);
+    OpenSoT::tasks::Aggregated::Ptr aggr = std::make_shared<OpenSoT::tasks::Aggregated>(task_list, ee1->getXSize());
+    EXPECT_TRUE(aggr->getTaskID() == "norm_ee1+norm_ee2");
+    EXPECT_TRUE(aggr->getWeight() == I);
+
+
+    OpenSoT::AutoStack::Ptr stack;
+    stack /= (een1 + een2);
+
+    OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e10);
+
+    OpenSoT::AutoStack::Ptr stack2 = ee1/(een1 + een2)/ee2;
+    OpenSoT::solvers::iHQP::Ptr solver2 = std::make_shared<OpenSoT::solvers::iHQP>(*stack2, 1e10);
+
 }
 
 TEST_F(testNormTask, testRegularization)
